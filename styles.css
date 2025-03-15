@@ -36,6 +36,7 @@ body, html {
   height: 100%;
   background-color: black;
   z-index: 1;
+  overflow: hidden;
 }
 
 .chat-container {
@@ -84,14 +85,16 @@ body, html {
   display: inline-block;
   position: relative;
   color: white;
-  text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
   font-size: 14px;
   letter-spacing: 1px;
+  font-weight: bold;
 }
 
 .message-text-char {
   position: relative;
   display: inline-block;
+  transition: transform 0.05s linear;
 }
 
 .input-area {
@@ -125,7 +128,13 @@ body, html {
 
 .noise-pixel {
   position: absolute;
-  background-color: white;
   z-index: 2;
 }
 
+.noise-pixel.white {
+  background-color: white;
+}
+
+.noise-pixel.black {
+  background-color: black;
+}

@@ -7,7 +7,7 @@ const room = new WebsimSocket();
 const NoiseChat = () => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
-  const [noisePixels, setNoisePixels] = useState([]);
+  const [noiseGrid, setNoiseGrid] = useState([]);
   const messageEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -44,45 +44,48 @@ const NoiseChat = () => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Generate random noise pixels
-  const generateNoisePixels = useCallback(() => {
+  // Generate random noise pixels as a grid covering the entire screen
+  const generateNoiseGrid = useCallback(() => {
     const now = Date.now();
-    // Limit updates to 20 fps
-    if (now - lastUpdateTimeRef.current < 50) {
-      animationFrameRef.current = requestAnimationFrame(generateNoisePixels);
+    // Limit updates to 24 fps
+    if (now - lastUpdateTimeRef.current < 42) {
+      animationFrameRef.current = requestAnimationFrame(generateNoiseGrid);
       return;
     }
     
     lastUpdateTimeRef.current = now;
     
-    const containerWidth = window.innerWidth;
-    const containerHeight = window.innerHeight;
-    const pixelDensity = Math.floor(containerWidth * containerHeight / 10000);
+    const pixelSize = 3; // Size of each noise pixel
+    const columns = Math.ceil(window.innerWidth / pixelSize);
+    const rows = Math.ceil(window.innerHeight / pixelSize);
     
-    const newPixels = [];
-    for (let i = 0; i < pixelDensity; i++) {
-      newPixels.push({
-        id: i,
-        size: Math.random() * 3 + 1,
-        x: Math.random() * containerWidth,
-        y: Math.random() * containerHeight,
-        opacity: Math.random() * 0.5 + 0.1
-      });
+    const newGrid = [];
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < columns; x++) {
+        // Randomly assign black or white
+        newGrid.push({
+          id: `${x}-${y}`,
+          x: x * pixelSize,
+          y: y * pixelSize,
+          size: pixelSize,
+          isWhite: Math.random() > 0.5
+        });
+      }
     }
     
-    setNoisePixels(newPixels);
-    animationFrameRef.current = requestAnimationFrame(generateNoisePixels);
+    setNoiseGrid(newGrid);
+    animationFrameRef.current = requestAnimationFrame(generateNoiseGrid);
   }, []);
 
   // Start and clean up animation frame
   useEffect(() => {
-    generateNoisePixels();
+    generateNoiseGrid();
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [generateNoisePixels]);
+  }, [generateNoiseGrid]);
 
   // Send message handler
   const sendMessage = async () => {
@@ -95,7 +98,7 @@ const NoiseChat = () => {
     setMessageInput('');
   };
 
-  // Message with jittering characters
+  // Message with continuously jittering characters
   const JitteringMessage = ({ text }) => {
     const [jitterStates, setJitterStates] = useState([]);
     
@@ -103,12 +106,14 @@ const NoiseChat = () => {
       const intervalId = setInterval(() => {
         setJitterStates(
           Array(text.length).fill().map(() => ({
-            offsetX: (Math.random() - 0.5) * 2,
-            offsetY: (Math.random() - 0.5) * 2,
-            opacity: Math.random() * 0.7 + 0.3
+            offsetX: (Math.random() - 0.5) * 3,
+            offsetY: (Math.random() - 0.5) * 3,
+            rotation: (Math.random() - 0.5) * 10, // Add rotation for more movement
+            scale: 0.9 + Math.random() * 0.2, // Add slight scaling
+            color: Math.random() > 0.5 ? '#ffffff' : '#f0f0f0' // Slight color variation for better visibility
           }))
         );
-      }, 50);
+      }, 30); // Faster update rate to make text constantly moving
       
       return () => clearInterval(intervalId);
     }, [text]);
@@ -121,8 +126,11 @@ const NoiseChat = () => {
             className="message-text-char"
             style={{
               transform: jitterStates[index] ? 
-                `translate(${jitterStates[index].offsetX}px, ${jitterStates[index].offsetY}px)` : 'none',
-              opacity: jitterStates[index] ? jitterStates[index].opacity : 1
+                `translate(${jitterStates[index].offsetX}px, ${jitterStates[index].offsetY}px) 
+                 rotate(${jitterStates[index].rotation}deg)
+                 scale(${jitterStates[index].scale})` : 'none',
+              color: jitterStates[index]?.color || 'white',
+              textShadow: '0 0 2px rgba(255,255,255,0.8)'
             }}
           >
             {char}
@@ -135,16 +143,15 @@ const NoiseChat = () => {
   return (
     <div className="noise-container">
       <div className="noise-layer">
-        {noisePixels.map((pixel) => (
+        {noiseGrid.map((pixel) => (
           <div
             key={pixel.id}
-            className="noise-pixel"
+            className={`noise-pixel ${pixel.isWhite ? 'white' : 'black'}`}
             style={{
               width: `${pixel.size}px`,
               height: `${pixel.size}px`,
               left: `${pixel.x}px`,
-              top: `${pixel.y}px`,
-              opacity: pixel.opacity
+              top: `${pixel.y}px`
             }}
           />
         ))}
@@ -192,4 +199,3 @@ const App = () => {
 
 const root = createRoot(document.getElementById('app'));
 root.render(<App />);
-
